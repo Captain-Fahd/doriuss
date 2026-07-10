@@ -1,122 +1,147 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'ping.dart';
+import 'package:http/http.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MainApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MainApp extends StatelessWidget {
+  const MainApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: ApiView()
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class ApiModel {
+  Future<Ping> getApiHealth() async {
+    final uri = Uri.http(
+      'localhost:8000',
+      '/api/v1/ping'
+    );
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+    final response = await get(uri);
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+    if (response.statusCode != 200) {
+      throw const HttpException('Failed to update resource');
+    }
 
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+    return Ping.fromJson(jsonDecode(response.body) as Map<String, Object?>);
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+class ApiView extends StatefulWidget {
+  const ApiView({super.key});
+
+  @override
+  State<ApiView> createState() => _ApiViewState();
+}
+
+class ApiViewModel extends ChangeNotifier{
+  final ApiModel model;
+
+  Ping? ping;
+  Exception? error;
+  bool isLoading = false;
+
+  ApiViewModel(this.model) {
+    pingApi();
+  }
+
+  Future<void> pingApi() async {
+    isLoading = true;
+    notifyListeners();
+    try{
+      ping = await model.getApiHealth();
+      error = null;
+      print('Ping health checked ${ping!.message}');
+    } on HttpException catch (e) {
+      error = e;
+      print('Error checking health ${e.message}');
+      ping = null;
+    }
+    isLoading = false;
+    notifyListeners();
+  }
+}
+
+class _ApiViewState extends State<ApiView> {
+  final ApiViewModel viewModel = ApiViewModel(ApiModel());
+
+  @override
+  void initState() {
+    super.initState();
+    viewModel.pingApi();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      appBar: AppBar(title: const Text('API healthcheck')),
+      body: ListenableBuilder(
+          listenable: viewModel,
+          builder: (context, child) {
+            return switch ((
+            viewModel.isLoading,
+            viewModel.ping,
+            viewModel.error,
+            )) {
+            (true, _, _) => const CircularProgressIndicator(),
+            (_, _, final Exception e) => Text('Error: $e'),
+            (_,final ping?, _) =>  ApiPage(
+              ping: ping,
+              pingApi: viewModel.pingApi,
             ),
-          ],
-        ),
+            _ => const Text('Something went wrong'),
+            };
+          }
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+    );
+  }
+}
+
+class ApiPage extends StatelessWidget {
+  const ApiPage({super.key, required this.ping, required this.pingApi});
+
+  final Ping ping;
+
+  final VoidCallback pingApi;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          ApiWidget(ping: ping),
+          ElevatedButton(onPressed: pingApi, child: const Text('Ping API'),
+          ),
+        ]
+      )
+    );
+  }
+}
+
+class ApiWidget extends StatelessWidget {
+  const ApiWidget({super.key, required this.ping});
+
+  final Ping ping;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        spacing: 10,
+        children: [Text(ping.toString())],
+    )
     );
   }
 }
