@@ -1,0 +1,30 @@
+services:
+  app:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      SPRING_DATASOURCE_USERNAME: doriuss_postgres
+      SPRING_DATASOURCE_PASSWORD: secret
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: doriuss_postgres
+      POSTGRES_USER: doriuss_postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U doriuss_postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
