@@ -27,6 +27,9 @@ public class User {
     @Column(unique = true, name = "username", nullable = false)
     private String username;
 
+    @Column(name = "display_name", nullable = false)
+    private String displayName;
+
     @Column(unique = true, name = "email", nullable = false)
     private String email;
 
@@ -43,6 +46,18 @@ public class User {
     private void onCreate() {
         this.createdAt = OffsetDateTime.now();
         this.updatedAt = createdAt;
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void ensureLowercase() {
+        if (this.email != null) {
+            this.email = this.email.toLowerCase();
+        }
+
+        if (this.username != null) {
+            this.username = this.username.toLowerCase();
+        }
     }
 
     @PreUpdate
