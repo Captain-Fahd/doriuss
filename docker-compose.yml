@@ -4,7 +4,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/doriuss_postgres
       SPRING_DATASOURCE_USERNAME: doriuss_postgres
       SPRING_DATASOURCE_PASSWORD: secret
     depends_on:
