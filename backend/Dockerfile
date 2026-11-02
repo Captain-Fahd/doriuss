@@ -1,5 +1,6 @@
 #------ Build Stage---------
 FROM maven:3.9-eclipse-temurin-21 AS build
+ENV PATH="$MAVEN_HOME/bin:$PATH"
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src

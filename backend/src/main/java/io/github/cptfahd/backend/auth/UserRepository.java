@@ -1,6 +1,5 @@
-package io.github.cptfahd.backend.repos;
+package io.github.cptfahd.backend.auth;
 
-import io.github.cptfahd.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

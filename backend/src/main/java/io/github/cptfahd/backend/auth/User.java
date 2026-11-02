@@ -1,11 +1,10 @@
-package io.github.cptfahd.backend.model;
+package io.github.cptfahd.backend.auth;
 
 
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.OffsetDateTime;
-import java.util.Date;
 import java.util.UUID;
 
 @Entity
@@ -46,10 +45,10 @@ public class User {
     private void onCreate() {
         this.createdAt = OffsetDateTime.now();
         this.updatedAt = createdAt;
+        ensureLowercase();
     }
 
-    @PrePersist
-    @PreUpdate
+
     private void ensureLowercase() {
         if (this.email != null) {
             this.email = this.email.toLowerCase();
@@ -62,6 +61,7 @@ public class User {
 
     @PreUpdate
     private void onUpdate() {
+        ensureLowercase();
         this.updatedAt = OffsetDateTime.now();
     }
 
