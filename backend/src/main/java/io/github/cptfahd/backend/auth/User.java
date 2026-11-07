@@ -41,13 +41,15 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    public User(String username, String email, int hash) {
+    }
+
     @PrePersist
     private void onCreate() {
         this.createdAt = OffsetDateTime.now();
         this.updatedAt = createdAt;
         ensureLowercase();
     }
-
 
     private void ensureLowercase() {
         if (this.email != null) {
